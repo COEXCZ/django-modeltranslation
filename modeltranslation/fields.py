@@ -4,7 +4,7 @@ from warnings import warn
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.db.models.fields import Field, CharField, TextField
+from django.db.models.fields import Field, CharField, TextField, BooleanField
 
 from modeltranslation.settings import *
 from modeltranslation.utils import (get_language,
@@ -28,7 +28,7 @@ def create_translation_field(model, field_name, lang):
     field = model._meta.get_field(field_name)
     cls_name = field.__class__.__name__
     # No subclass required for text-like fields
-    if not (isinstance(field, (CharField, TextField)) or
+    if not (isinstance(field, (CharField, TextField, BooleanField)) or
             cls_name in CUSTOM_FIELDS):
         raise ImproperlyConfigured('%s is not supported by '
                                    'modeltranslation.' % cls_name)
@@ -79,8 +79,8 @@ class TranslationField(Field):
 
         # Copy the verbose name and append a language suffix
         # (will show up e.g. in the admin).
-        self.verbose_name = build_localized_verbose_name(
-            translated_field.verbose_name, language)
+        # self.verbose_name = build_localized_verbose_name(
+        #     translated_field.verbose_name, language)
 
     def pre_save(self, model_instance, add):
         val = super(TranslationField, self).pre_save(model_instance, add)
@@ -118,12 +118,9 @@ class TranslationField(Field):
 
     def formfield(self, *args, **kwargs):
         """
-        Preserves the widget of the translated field.
+        Preserves the original formfield.
         """
-        trans_formfield = self.translated_field.formfield(*args, **kwargs)
-        defaults = {'widget': type(trans_formfield.widget)}
-        defaults.update(kwargs)
-        return super(TranslationField, self).formfield(*args, **defaults)
+        return self.translated_field.formfield(*args, **kwargs)
 
 
 class TranslationFieldDescriptor(object):
